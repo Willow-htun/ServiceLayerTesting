@@ -15,7 +15,7 @@ namespace SAPB1ServiceLayerTest
             if (!string.IsNullOrEmpty(sessionId))
             {
                 Logger.WriteLog("Program Started.");
-                Logger.WriteLog("Program Started.Hi.");
+                Logger.WriteLog("Program Started.HiHi.");
                 //BPSampleCreation.CreateMultipleBusinessPartners(sessionId);
                 //JESampleCreation.CreateSampleJE(sessionId);
                 Utilities.Logout(sessionId);

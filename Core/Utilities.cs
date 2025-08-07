@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using ServiceLayerTesting.Model;
 using System.Configuration;
+using ServiceLayerTesting.Core;
 
 namespace ServiceLayerTesting.Core
 {
@@ -46,13 +47,13 @@ namespace ServiceLayerTesting.Core
                 {
                     var result = streamReader.ReadToEnd();
                     var responseInstance = JsonConvert.DeserializeObject<LoginResponse>(result);
-                    Console.WriteLine("Logged in successfully.");
+                    Logger.WriteLog("Logged in successfully.");
                     return responseInstance.SessionId;
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Login failed: " + ex.Message);
+                Logger.WriteError("Login failed: " + ex.Message);
             }
 
             return null;
@@ -74,17 +75,17 @@ namespace ServiceLayerTesting.Core
                     if (response.StatusCode == HttpStatusCode.NoContent
                         || response.StatusCode == HttpStatusCode.OK)
                     {
-                        Console.WriteLine("Logged out successfully.");
+                        Logger.WriteLog("Logged out successfully.");
                     }
                     else
                     {
-                        Console.WriteLine("Logout failed. Status code: " + response.StatusCode);
+                        Logger.WriteError("Logout failed. Status code: " + response.StatusCode);
                     }
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("An error occurred during logout: " + ex.Message);
+                Logger.WriteError("An error occurred during logout: " + ex.Message);
             }
         }
     }

@@ -1,25 +1,44 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
+using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 using System.Net;
-using System.Configuration;
+using Newtonsoft.Json;
+using ServiceLayerTesting.Model;
+using ServiceLayerTesting.Core;
 
 namespace ServiceLayerTesting.Processor
 {
     public static class BPSampleCreation
     {
-        public static void CreateBusinessPartner(string sessionId)
+        // Batch method to handle multiple BP creations
+        public static void CreateMultipleBusinessPartners(string sessionId)
+        {
+            // This data could come from a file or zip for Htachi.
+            var bpList = GetBusinessPartners();
+
+            foreach (var bp in bpList)
+            {
+                CreateBusinessPartner(sessionId, bp);
+            }
+        }
+
+        // Encapsulate BP sample data here (simulate file/DB/etc.)
+        private static List<BusinessPartner> GetBusinessPartners()
+        {
+            return new List<BusinessPartner>
+            {
+                new BusinessPartner { CardCode = "SLTest3", CardName = "ServiceLayerTestName3", CardType = "C", GroupCode = 100 },
+                new BusinessPartner { CardCode = "SLTest4", CardName = "ServiceLayerTestName4", CardType = "C", GroupCode = 100 }
+            };
+        }
+
+        public static void CreateBusinessPartner(string sessionId, BusinessPartner bp)
         {
             string baseUrl = ConfigurationManager.AppSettings["ServiceLayerBaseUrl"];
             string businessPartnerUrl = $"{baseUrl}/BusinessPartners";
 
-            JObject businessPartnerData = new JObject
-            {
-                { "CardCode", "SLTest2" },
-                { "CardName", "ServiceLayerTestName2" },
-                { "CardType", "C" },
-                { "GroupCode", 100 }
-            };
+            string bpJson = JsonConvert.SerializeObject(bp);
 
             try
             {
@@ -31,18 +50,18 @@ namespace ServiceLayerTesting.Processor
 
                 using (var streamWriter = new StreamWriter(request.GetRequestStream()))
                 {
-                    streamWriter.Write(businessPartnerData.ToString());
+                    streamWriter.Write(bpJson);
                 }
 
                 using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
                 {
                     if (response.StatusCode == HttpStatusCode.Created)
                     {
-                        Console.WriteLine("Business Partner created successfully.");
+                        Logger.WriteLog($"Business Partner {bp.CardCode} created successfully.");
                     }
                     else
                     {
-                        Console.WriteLine("Failed to create Business Partner. Status code: " + response.StatusCode);
+                        Logger.WriteError($"Failed to create Business Partner {bp.CardCode}. Status code: " + response.StatusCode);
                     }
                 }
             }
@@ -51,7 +70,7 @@ namespace ServiceLayerTesting.Processor
                 using (var reader = new StreamReader(ex.Response.GetResponseStream()))
                 {
                     string errorResponse = reader.ReadToEnd();
-                    Console.WriteLine("Business Partner creation failed. Detailed error: " + errorResponse);
+                    Logger.WriteError($"Business Partner {bp.CardCode} creation failed. Detailed error: {errorResponse}");
                 }
             }
         }

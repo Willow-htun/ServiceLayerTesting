@@ -9,24 +9,27 @@ namespace SAPB1ServiceLayerTest
         static void Main(string[] args)
         {
             log4net.Config.XmlConfigurator.Configure();
+            Logger.WriteLog("--------------------------------------------------------------------------------------------------.");
+            Logger.WriteLog("Program Started.");
+            Logger.WriteLog("--------------------------------------------------------------------------------------------------.");
 
             var sessionId = Utilities.Login();
 
             if (!string.IsNullOrEmpty(sessionId))
             {
-                Logger.WriteLog("Program Started.");
-                Logger.WriteLog("Program Started.HiHe.");
                 //BPSampleCreation.CreateMultipleBusinessPartners(sessionId);
                 //JESampleCreation.CreateSampleJE(sessionId);
                 Utilities.Logout(sessionId);
+                Logger.WriteLog("--------------------------------------------------------------------------------------------------.");
                 Logger.WriteLog("Program finished successfully.");
+                Logger.WriteLog("--------------------------------------------------------------------------------------------------.");
             }
             else
             {
                 Logger.WriteError("Login failed.");
             }
 
-            //Console.ReadLine();
+            Console.ReadLine();
         }
     }
 }

@@ -21,7 +21,8 @@ namespace SAPB1ServiceLayerTest
                 //JEReadAndInsert.ReadJEAndInsert(sessionId);
                 //BPSampleCreation.CreateMultipleBusinessPartners(sessionId);
                 //JESampleCreation.CreateSampleJE(sessionId);
-                JETranAPIinsert.CreateSampleJE(sessionId);
+                //JETranAPIinsert.CreateSampleJE(sessionId);
+                JEReadAndInsert_Batch.ReadJEAndInsert(sessionId);
                 Utilities.Logout(sessionId);
                 Logger.WriteLog("--------------------------------------------------------------------------------------------------.");
                 Logger.WriteLog("Program finished successfully.");

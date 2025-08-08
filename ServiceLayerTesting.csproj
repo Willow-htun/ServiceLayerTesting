@@ -77,6 +77,7 @@
     <Compile Include="Core\Logger.cs" />
     <Compile Include="Core\Utilities.cs" />
     <Compile Include="HelperMethod\AllorNothingJEPoster.cs" />
+    <Compile Include="HelperMethod\BatchJEPoster.cs" />
     <Compile Include="HelperMethod\EmailSender.cs" />
     <Compile Include="HelperMethod\JEPoster.cs" />
     <Compile Include="Model\BusinessPartner.cs" />
@@ -86,6 +87,7 @@
     <Compile Include="Model\LoginResponse.cs" />
     <Compile Include="Processor\BPSampleCreation.cs" />
     <Compile Include="Processor\JEReadAndInsert.cs" />
+    <Compile Include="Processor\JEReadAndInsert_Batch.cs" />
     <Compile Include="Processor\JESampleCreation.cs" />
     <Compile Include="Processor\JETranAPIinsert.cs" />
     <Compile Include="Program.cs" />

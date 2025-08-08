@@ -5,7 +5,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq; // only to read error.message.value
+using Newtonsoft.Json.Linq;
 using ServiceLayerTesting.Core;
 using ServiceLayerTesting.Model;
 

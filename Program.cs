@@ -13,16 +13,15 @@ namespace SAPB1ServiceLayerTest
             Logger.WriteLog("--------------------------------------------------------------------------------------------------.");
             Logger.WriteLog("Program Started.");
             Logger.WriteLog("--------------------------------------------------------------------------------------------------.");
-            // TEMP: quick email test
-            //EmailSender.Send("Test from ServiceLayerTesting", "If you see this, SMTP works.");
 
             var sessionId = Utilities.Login();
 
             if (!string.IsNullOrEmpty(sessionId))
             {
-                JEReadAndInsert.ReadJEAndInsert(sessionId);
+                //JEReadAndInsert.ReadJEAndInsert(sessionId);
                 //BPSampleCreation.CreateMultipleBusinessPartners(sessionId);
                 //JESampleCreation.CreateSampleJE(sessionId);
+                JETranAPIinsert.CreateSampleJE(sessionId);
                 Utilities.Logout(sessionId);
                 Logger.WriteLog("--------------------------------------------------------------------------------------------------.");
                 Logger.WriteLog("Program finished successfully.");

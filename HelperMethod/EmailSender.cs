@@ -21,7 +21,7 @@ namespace ServiceLayerTesting.HelperMethod
             var fromName = ConfigurationManager.AppSettings["SmtpFromName"];
             //Doesn't work
             var cfgdefaultSubject = ConfigurationManager.AppSettings["SmtpSubject"];
-            
+
             //Doesn't work
             if (string.IsNullOrWhiteSpace(subject))
                 subject = cfgdefaultSubject;

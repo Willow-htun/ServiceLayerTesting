@@ -5,6 +5,7 @@ using System.Net;
 using Newtonsoft.Json;
 using ServiceLayerTesting.Model;
 using ServiceLayerTesting.Core;
+using ServiceLayerTesting.HelperMethod;
 
 namespace ServiceLayerTesting.Processor
 {
@@ -15,6 +16,13 @@ namespace ServiceLayerTesting.Processor
             string baseUrl = ConfigurationManager.AppSettings["ServiceLayerBaseUrl"];
             string journalEntryUrl = $"{baseUrl}/JournalEntries";
             string jeJson = JsonConvert.SerializeObject(je);
+
+            // Read flag once
+            bool emailEnabled = string.Equals(
+                (ConfigurationManager.AppSettings["EmailSend"] ?? "Y").Trim(),
+                "Y",
+                StringComparison.OrdinalIgnoreCase
+            );
 
             try
             {
@@ -35,30 +43,80 @@ namespace ServiceLayerTesting.Processor
                     {
                         string today = DateTime.Now.ToString("yyyy-MM-dd");
                         Logger.WriteLog($"{today} - Journal Entry from object created successfully.");
-                        return true; // Success
+
+                        if (emailEnabled)
+                        {
+                            EmailSender.Send(
+                                "JE Created Successfully(Thu Rein Htun)",
+                                $"Date: {today}\nMemo: {je?.Memo}\nLines: {je?.JournalEntryLines?.Count}"
+                            );
+                        }
+                        else
+                        {
+                            Logger.WriteLog("EmailSend = N in config — skipping success email.");
+                        }
+
+                        return true;
                     }
                     else
                     {
                         string today = DateTime.Now.ToString("yyyy-MM-dd");
-                        Logger.WriteError($"{today} - Failed to create Journal Entry. Status code: " + response.StatusCode);
+                        var msg = $"{today} - Failed to create Journal Entry. Status code: {response.StatusCode}";
+                        Logger.WriteError(msg);
+
+                        if (emailEnabled)
+                        {
+                            EmailSender.Send("JE Creation Failed", msg);
+                        }
+                        else
+                        {
+                            Logger.WriteLog("EmailSend = N in config — skipping failure email.");
+                        }
+
                         return false;
                     }
                 }
             }
             catch (WebException ex)
             {
-                using (var reader = new StreamReader(ex.Response.GetResponseStream()))
+                string today = DateTime.Now.ToString("yyyy-MM-dd");
+                string errorResponse = "(no response)";
+                try
                 {
-                    string today = DateTime.Now.ToString("yyyy-MM-dd");
-                    string errorResponse = reader.ReadToEnd();
-                    Logger.WriteError($"{today} - Journal Entry creation failed. Detailed error: " + errorResponse);
+                    using (var reader = new StreamReader(ex.Response.GetResponseStream()))
+                        errorResponse = reader.ReadToEnd();
                 }
+                catch { /* ignore if no response stream */ }
+
+                var msg = $"{today} - Journal Entry creation failed. Detailed error: {errorResponse}";
+                Logger.WriteError(msg);
+
+                if (emailEnabled)
+                {
+                    EmailSender.Send("JE Creation Failed (WebException)", msg);
+                }
+                else
+                {
+                    Logger.WriteLog("EmailSend = N in config — skipping WebException email.");
+                }
+
                 return false;
             }
             catch (Exception ex)
             {
                 string today = DateTime.Now.ToString("yyyy-MM-dd");
-                Logger.WriteError($"{today} - Unexpected error posting Journal Entry: " + ex.Message);
+                var msg = $"{today} - Unexpected error posting Journal Entry: {ex.Message}";
+                Logger.WriteError(msg);
+
+                if (emailEnabled)
+                {
+                    EmailSender.Send("JE Creation Failed (Unexpected)", msg);
+                }
+                else
+                {
+                    Logger.WriteLog("EmailSend = N in config — skipping unexpected-error email.");
+                }
+
                 return false;
             }
         }

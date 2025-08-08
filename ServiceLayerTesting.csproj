@@ -76,6 +76,7 @@
   <ItemGroup>
     <Compile Include="Core\Logger.cs" />
     <Compile Include="Core\Utilities.cs" />
+    <Compile Include="HelperMethod\EmailSender.cs" />
     <Compile Include="HelperMethod\JEPoster.cs" />
     <Compile Include="Model\BusinessPartner.cs" />
     <Compile Include="Model\JE.cs" />

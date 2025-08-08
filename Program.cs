@@ -2,7 +2,7 @@
 using log4net.Config;
 using ServiceLayerTesting.Core;
 using ServiceLayerTesting.Processor;
-
+using ServiceLayerTesting.HelperMethod;
 namespace SAPB1ServiceLayerTest
 {
     internal class Program
@@ -13,6 +13,8 @@ namespace SAPB1ServiceLayerTest
             Logger.WriteLog("--------------------------------------------------------------------------------------------------.");
             Logger.WriteLog("Program Started.");
             Logger.WriteLog("--------------------------------------------------------------------------------------------------.");
+            // TEMP: quick email test
+            //EmailSender.Send("Test from ServiceLayerTesting", "If you see this, SMTP works.");
 
             var sessionId = Utilities.Login();
 

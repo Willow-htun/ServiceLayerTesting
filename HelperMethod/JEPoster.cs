@@ -17,9 +17,16 @@ namespace ServiceLayerTesting.Processor
             string journalEntryUrl = $"{baseUrl}/JournalEntries";
             string jeJson = JsonConvert.SerializeObject(je);
 
-            // Read flag once
+            // Global email toggle (used for batch summary elsewhere; not for per-JE here)
             bool emailEnabled = string.Equals(
                 (ConfigurationManager.AppSettings["EmailSend"] ?? "Y").Trim(),
+                "Y",
+                StringComparison.OrdinalIgnoreCase
+            );
+
+            // Per-JE email toggle (default N) - only this flag controls emails inside JEPoster
+            bool emailPerJe = string.Equals(
+                (ConfigurationManager.AppSettings["EmailPerJE"] ?? "N").Trim(),
                 "Y",
                 StringComparison.OrdinalIgnoreCase
             );
@@ -44,16 +51,17 @@ namespace ServiceLayerTesting.Processor
                         string today = DateTime.Now.ToString("yyyy-MM-dd");
                         Logger.WriteLog($"{today} - Journal Entry from object created successfully.");
 
-                        if (emailEnabled)
+                        // Only send per-JE email if explicitly enabled
+                        if (emailPerJe && emailEnabled)
                         {
                             EmailSender.Send(
-                                "JE Created Successfully(Thu Rein Htun)",
+                                "JE Created Successfully",
                                 $"Date: {today}\nMemo: {je?.Memo}\nLines: {je?.JournalEntryLines?.Count}"
                             );
                         }
                         else
                         {
-                            Logger.WriteLog("EmailSend = N in config — skipping success email.");
+                            Logger.WriteLog("EmailPerJE=N or EmailSend=N — skipping per-JE success email.");
                         }
 
                         return true;
@@ -64,13 +72,13 @@ namespace ServiceLayerTesting.Processor
                         var msg = $"{today} - Failed to create Journal Entry. Status code: {response.StatusCode}";
                         Logger.WriteError(msg);
 
-                        if (emailEnabled)
+                        if (emailPerJe && emailEnabled)
                         {
                             EmailSender.Send("JE Creation Failed", msg);
                         }
                         else
                         {
-                            Logger.WriteLog("EmailSend = N in config — skipping failure email.");
+                            Logger.WriteLog("EmailPerJE=N or EmailSend=N — skipping per-JE failure email.");
                         }
 
                         return false;
@@ -83,7 +91,7 @@ namespace ServiceLayerTesting.Processor
                 string errorResponse = "(no response)";
                 try
                 {
-                    using (var reader = new StreamReader(ex.Response.GetResponseStream()))
+                    using (var reader = new StreamReader(ex.Response?.GetResponseStream() ?? Stream.Null))
                         errorResponse = reader.ReadToEnd();
                 }
                 catch { /* ignore if no response stream */ }
@@ -91,13 +99,13 @@ namespace ServiceLayerTesting.Processor
                 var msg = $"{today} - Journal Entry creation failed. Detailed error: {errorResponse}";
                 Logger.WriteError(msg);
 
-                if (emailEnabled)
+                if (emailPerJe && emailEnabled)
                 {
                     EmailSender.Send("JE Creation Failed (WebException)", msg);
                 }
                 else
                 {
-                    Logger.WriteLog("EmailSend = N in config — skipping WebException email.");
+                    Logger.WriteLog("EmailPerJE=N or EmailSend=N — skipping per-JE WebException email.");
                 }
 
                 return false;
@@ -108,13 +116,13 @@ namespace ServiceLayerTesting.Processor
                 var msg = $"{today} - Unexpected error posting Journal Entry: {ex.Message}";
                 Logger.WriteError(msg);
 
-                if (emailEnabled)
+                if (emailPerJe && emailEnabled)
                 {
                     EmailSender.Send("JE Creation Failed (Unexpected)", msg);
                 }
                 else
                 {
-                    Logger.WriteLog("EmailSend = N in config — skipping unexpected-error email.");
+                    Logger.WriteLog("EmailPerJE=N or EmailSend=N — skipping per-JE unexpected-error email.");
                 }
 
                 return false;

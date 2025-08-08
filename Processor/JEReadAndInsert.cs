@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Configuration;
+using System.Linq;
 using ServiceLayerTesting.Model;
 using ServiceLayerTesting.Core;
+using ServiceLayerTesting.HelperMethod;
 
 namespace ServiceLayerTesting.Processor
 {
@@ -22,87 +24,164 @@ namespace ServiceLayerTesting.Processor
             try
             {
                 string[] lines = File.ReadAllLines(filePath);
+                var allJEs = ParseMultipleJEs(lines);
 
-                var je = new JE();
-                je.JournalEntryLines = new List<JELine>();
-                JELine currentLine = null;
-
-                foreach (var rawLine in lines)
-                {
-                    var line = rawLine.Trim();
-
-                    if (string.IsNullOrEmpty(line))
-                    {
-                        if (currentLine != null)
-                        {
-                            je.JournalEntryLines.Add(currentLine);
-                            currentLine = null;
-                        }
-                        continue;
-                    }
-
-                    if (line.StartsWith("Date ="))
-                    {
-                        string dateStr = line.Split('=')[1].Trim();
-                        DateTime date = DateTime.ParseExact(dateStr, "MM/dd/yyyy", CultureInfo.InvariantCulture);
-                        je.ReferenceDate = date.ToString("yyyy-MM-dd");
-                    }
-                    else if (line.StartsWith("Memo ="))
-                    {
-                        je.Memo = line.Split('=')[1].Trim();
-                    }
-                    else if (line.StartsWith("AccountCode ="))
-                    {
-                        if (currentLine != null)
-                        {
-                            je.JournalEntryLines.Add(currentLine);
-                        }
-                        currentLine = new JELine();
-                        currentLine.AccountCode = line.Split('=')[1].Trim();
-                    }
-                    else if (line.StartsWith("Debit ="))
-                    {
-                        if (currentLine != null)
-                            currentLine.Debit = double.Parse(line.Split('=')[1].Trim(), CultureInfo.InvariantCulture);
-                    }
-                    else if (line.StartsWith("Credit ="))
-                    {
-                        if (currentLine != null)
-                            currentLine.Credit = double.Parse(line.Split('=')[1].Trim(), CultureInfo.InvariantCulture);
-                    }
-                    else if (line.StartsWith("LineMemo ="))
-                    {
-                        if (currentLine != null)
-                            currentLine.LineMemo = line.Split('=')[1].Trim();
-                    }
-                }
-
-                // Don't forget the last line if file doesn't end with an empty line
-                if (currentLine != null)
-                {
-                    je.JournalEntryLines.Add(currentLine);
-                }
-
-                if (je.JournalEntryLines.Count == 0)
+                if (allJEs.Count == 0)
                 {
                     Logger.WriteError("No journal entry lines were parsed from the file.");
                     return;
                 }
 
-                bool isSuccess = JEPoster.PostJE(sessionId, je);
-                if (isSuccess)
+                Logger.WriteLog($"Parsed {allJEs.Count} Journal Entries from file.");
+
+                var results = new List<(int Index, string Memo, string RefDate, bool Success, string Message)>();
+
+                for (int i = 0; i < allJEs.Count; i++)
                 {
-                    Logger.WriteLog("Journal Entry from file inserted successfully.");
+                    var je = allJEs[i];
+                    var idx = i + 1;
+                    Logger.WriteLog($"[JE #{idx}] Posting... Memo='{je.Memo}', Date='{je.ReferenceDate}', Lines={je.JournalEntryLines?.Count ?? 0}");
+
+                    bool ok = JEPoster.PostJE(sessionId, je);
+                    if (ok)
+                    {
+                        Logger.WriteLog($"[JE #{idx}] Posted successfully.");
+                        results.Add((idx, je.Memo, je.ReferenceDate, true, "Created"));
+                    }
+                    else
+                    {
+                        Logger.WriteError($"[JE #{idx}] Failed to post.");
+                        results.Add((idx, je.Memo, je.ReferenceDate, false, "Failed"));
+                    }
+                }
+
+                // Single summary email for the whole batch
+                bool emailEnabled = string.Equals(
+                    (ConfigurationManager.AppSettings["EmailSend"] ?? "Y").Trim(),
+                    "Y",
+                    StringComparison.OrdinalIgnoreCase
+                );
+
+                if (emailEnabled)
+                {
+                    var total = results.Count;
+                    var success = results.Count(r => r.Success);
+                    var failed = total - success;
+
+                    var subject = ConfigurationManager.AppSettings["SmtpSubject"] ?? "Journal Entry Notification";
+
+                    // Build body
+                    var bodyLines = new List<string>
+                    {
+                        $"Batch JE Result",
+                        $"Total: {total}, Success: {success}, Failed: {failed}",
+                        ""
+                    };
+                    bodyLines.AddRange(results.Select(r =>
+                        $"JE #{r.Index} | Date={r.RefDate} | Memo='{r.Memo}' | Status={r.Message}"
+                    ));
+
+                    EmailSender.Send(subject, string.Join(Environment.NewLine, bodyLines));
+                    Logger.WriteLog("Batch email sent.");
                 }
                 else
                 {
-                    Logger.WriteError("Journal Entry was not inserted due to posting error.");
+                    Logger.WriteLog("EmailSend = N — skipping batch summary email.");
                 }
             }
             catch (Exception ex)
             {
-                Logger.WriteError("Failed to read and insert JE from file: " + ex.Message);
+                Logger.WriteError("Failed to read and insert JEs from file: " + ex.Message);
             }
+        }
+
+        private static List<JE> ParseMultipleJEs(string[] lines)
+        {
+            var allJEs = new List<JE>();
+            JE currentJE = null;
+            JELine currentLine = null;
+
+            foreach (var raw in lines)
+            {
+                var line = raw.Trim();
+
+                // Separator: end current JE
+                if (line == "=== JE ===")
+                {
+                    if (currentLine != null)
+                    {
+                        currentJE?.JournalEntryLines?.Add(currentLine);
+                        currentLine = null;
+                    }
+                    if (currentJE != null && (currentJE.JournalEntryLines?.Count ?? 0) > 0)
+                    {
+                        allJEs.Add(currentJE);
+                    }
+                    currentJE = null;
+                    continue;
+                }
+
+                // Blank line: end a line item
+                if (string.IsNullOrEmpty(line))
+                {
+                    if (currentLine != null)
+                    {
+                        currentJE?.JournalEntryLines?.Add(currentLine);
+                        currentLine = null;
+                    }
+                    continue;
+                }
+
+                // Lazy-create JE on first header/line
+                if (currentJE == null)
+                {
+                    currentJE = new JE { JournalEntryLines = new List<JELine>() };
+                }
+
+                if (line.StartsWith("Date =", StringComparison.OrdinalIgnoreCase))
+                {
+                    string dateStr = line.Split('=')[1].Trim();
+                    DateTime date = DateTime.ParseExact(dateStr, "MM/dd/yyyy", CultureInfo.InvariantCulture);
+                    currentJE.ReferenceDate = date.ToString("yyyy-MM-dd");
+                }
+                else if (line.StartsWith("Memo =", StringComparison.OrdinalIgnoreCase))
+                {
+                    currentJE.Memo = line.Split('=')[1].Trim();
+                }
+                else if (line.StartsWith("AccountCode =", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (currentLine != null) currentJE.JournalEntryLines.Add(currentLine);
+                    currentLine = new JELine { AccountCode = line.Split('=')[1].Trim() };
+                }
+                else if (line.StartsWith("Debit =", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (currentLine != null)
+                        currentLine.Debit = double.Parse(line.Split('=')[1].Trim(), CultureInfo.InvariantCulture);
+                }
+                else if (line.StartsWith("Credit =", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (currentLine != null)
+                        currentLine.Credit = double.Parse(line.Split('=')[1].Trim(), CultureInfo.InvariantCulture);
+                }
+                else if (line.StartsWith("LineMemo =", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (currentLine != null)
+                        currentLine.LineMemo = line.Split('=')[1].Trim();
+                }
+            }
+
+            // finalize EOF
+            if (currentLine != null)
+            {
+                currentJE?.JournalEntryLines?.Add(currentLine);
+                currentLine = null;
+            }
+            if (currentJE != null && (currentJE.JournalEntryLines?.Count ?? 0) > 0)
+            {
+                allJEs.Add(currentJE);
+            }
+
+            return allJEs;
         }
     }
 }

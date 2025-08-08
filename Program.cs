@@ -1,14 +1,15 @@
 ﻿using System;
+using log4net.Config;
 using ServiceLayerTesting.Core;
 using ServiceLayerTesting.Processor;
-[assembly: log4net.Config.XmlConfigurator(Watch = true)]
+
 namespace SAPB1ServiceLayerTest
 {
     internal class Program
     {
         static void Main(string[] args)
         {
-            log4net.Config.XmlConfigurator.Configure();
+            XmlConfigurator.Configure();
             Logger.WriteLog("--------------------------------------------------------------------------------------------------.");
             Logger.WriteLog("Program Started.");
             Logger.WriteLog("--------------------------------------------------------------------------------------------------.");
@@ -17,6 +18,7 @@ namespace SAPB1ServiceLayerTest
 
             if (!string.IsNullOrEmpty(sessionId))
             {
+                JEReadAndInsert.ReadJEAndInsert(sessionId);
                 //BPSampleCreation.CreateMultipleBusinessPartners(sessionId);
                 //JESampleCreation.CreateSampleJE(sessionId);
                 Utilities.Logout(sessionId);

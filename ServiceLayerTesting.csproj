@@ -76,12 +76,14 @@
   <ItemGroup>
     <Compile Include="Core\Logger.cs" />
     <Compile Include="Core\Utilities.cs" />
+    <Compile Include="HelperMethod\JEPoster.cs" />
     <Compile Include="Model\BusinessPartner.cs" />
     <Compile Include="Model\JE.cs" />
     <Compile Include="Model\JELine.cs" />
     <Compile Include="Model\LoginRequest.cs" />
     <Compile Include="Model\LoginResponse.cs" />
     <Compile Include="Processor\BPSampleCreation.cs" />
+    <Compile Include="Processor\JEReadAndInsert.cs" />
     <Compile Include="Processor\JESampleCreation.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
